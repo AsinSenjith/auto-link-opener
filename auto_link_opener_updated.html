@@ -1,26 +1,69 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Auto Link Opener/Closer</title>
+  <title>Continuous Auto Link Opener/Closer</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
       background-color: #f2f2f2;
+      max-width: 800px;
+      margin: 0 auto;
     }
     #startBtn, #stopBtn {
       padding: 10px 20px;
       font-size: 16px;
       margin-right: 10px;
       cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    #stopBtn {
+      background-color: #f44336;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #e9e9e9;
+      border-radius: 4px;
+    }
+    .metrics {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #e0f7fa;
+      border-radius: 4px;
+    }
+    h2 {
+      color: #333;
+    }
+    .warning {
+      color: #f44336;
+      font-weight: bold;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <h2>Auto Link Opener and Closer</h2>
+  <h2>Continuous Auto Link Opener and Closer</h2>
+  <p>This tool will continuously open and close the links in random order until stopped.</p>
+  
   <button id="startBtn">Start</button>
   <button id="stopBtn" disabled>Stop</button>
-
+  
+  <div class="status" id="status">Status: Idle</div>
+  <div class="metrics" id="metrics">
+    Total opened: 0<br>
+    Currently open: 0
+  </div>
+  
+  <p class="warning">Note: Most browsers block automatic popups. You may need to allow popups for this page to work properly.</p>
+  
   <script>
     const links = [
       "https://www.profitableratecpm.com/rnct0itjk?key=0550c92ea01e4f4b64374d7f20243dce",
@@ -28,42 +71,161 @@
       "https://www.profitableratecpm.com/hjxp2nv46?key=e8148b85096b5d5267f09b2637898d17",
       "https://www.profitableratecpm.com/a4wcmma9?key=1ce4bc5e1e7a5e57dc11f406ed201630"
     ];
-
+    
     let isRunning = false;
-    let interval;
-    const openWindows = [];
-
-    function openAndCloseLinks() {
-      const shuffled = [...links].sort(() => 0.5 - Math.random());
-      const toOpen = shuffled.slice(0, 3 + Math.floor(Math.random() * 2)); // 3 to 4 links randomly
-
-      toOpen.forEach(link => {
-        const win = window.open(link, "_blank", "width=600,height=400");
+    let openWindows = [];
+    let totalOpened = 0;
+    let currentlyOpen = 0;
+    
+    const statusElement = document.getElementById("status");
+    const metricsElement = document.getElementById("metrics");
+    
+    // Update the metrics display
+    function updateMetrics() {
+      currentlyOpen = openWindows.filter(w => !w.closed).length;
+      metricsElement.innerHTML = `Total opened: ${totalOpened}<br>Currently open: ${currentlyOpen}`;
+    }
+    
+    function updateStatus(message) {
+      statusElement.textContent = `Status: ${message}`;
+    }
+    
+    // Function to simulate a click in the opened window
+    function simulateClick(win) {
+      try {
+        // Wait for the page to load before attempting to click
+        setTimeout(() => {
+          try {
+            if (win.closed) return;
+            
+            // Try to find clickable elements and click one
+            const doc = win.document;
+            const clickables = doc.querySelectorAll('a, button, input[type="button"], input[type="submit"]');
+            
+            if (clickables.length > 0) {
+              // Select a random element to click
+              const randomIndex = Math.floor(Math.random() * clickables.length);
+              clickables[randomIndex].click();
+            }
+          } catch (e) {
+            console.log("Could not simulate click: ", e);
+          }
+        }, 3000); // Wait 3 seconds for page to load before clicking
+      } catch (e) {
+        console.log("Error in simulateClick: ", e);
+      }
+    }
+    
+    // Function to open a single link
+    function openLink(link) {
+      if (!isRunning) return;
+      
+      try {
+        const win = window.open(link, `_blank_${Date.now()}`, "width=800,height=600");
+        
         if (win) {
           openWindows.push(win);
+          totalOpened++;
+          updateMetrics();
+          updateStatus(`Opened: ${link.substring(0, 30)}...`);
+          
+          // Attempt to simulate a click after the page loads
+          simulateClick(win);
+          
+          // Close after 10-15 seconds
+          const closeTime = 10000 + Math.random() * 5000;
           setTimeout(() => {
-            win.close();
-          }, 5000 + Math.random() * 3000); // Close after 5–8 seconds
+            if (isRunning) {
+              try {
+                if (!win.closed) {
+                  win.close();
+                }
+                // Remove from the array
+                openWindows = openWindows.filter(w => w !== win);
+                updateMetrics();
+                updateStatus(`Closed a window. Opening next...`);
+                
+                // Open another random link after closing this one
+                const randomDelay = 1000 + Math.random() * 2000; // 1-3 seconds delay
+                setTimeout(() => {
+                  if (isRunning) {
+                    openRandomLink();
+                  }
+                }, randomDelay);
+              } catch (e) {
+                console.log("Error closing window: ", e);
+              }
+            }
+          }, closeTime);
+        } else {
+          updateStatus("Popup blocked. Please allow popups for this site.");
         }
-      });
+      } catch (e) {
+        console.log("Error opening window: ", e);
+        updateStatus("Error opening window. Popup might be blocked.");
+      }
     }
-
+    
+    // Function to open a random link
+    function openRandomLink() {
+      if (!isRunning) return;
+      
+      // Select a random link
+      const randomIndex = Math.floor(Math.random() * links.length);
+      const randomLink = links[randomIndex];
+      
+      openLink(randomLink);
+    }
+    
+    // Start button functionality
     document.getElementById("startBtn").onclick = () => {
       if (!isRunning) {
         isRunning = true;
-        interval = setInterval(openAndCloseLinks, 10000); // Every 10 seconds
+        updateStatus("Running - continuously opening and closing links");
         document.getElementById("startBtn").disabled = true;
         document.getElementById("stopBtn").disabled = false;
+        
+        // Start the continuous process with multiple initial links
+        const initialCount = 3 + Math.floor(Math.random() * 2); // 3-4 links
+        
+        for (let i = 0; i < initialCount; i++) {
+          setTimeout(() => {
+            if (isRunning) {
+              openRandomLink();
+            }
+          }, i * 2000); // Stagger the initial openings
+        }
       }
     };
-
+    
+    // Stop button functionality
     document.getElementById("stopBtn").onclick = () => {
-      clearInterval(interval);
-      openWindows.forEach(win => win.close());
       isRunning = false;
+      updateStatus("Stopping - closing all windows");
+      
+      // Close all open windows
+      openWindows.forEach((win, index) => {
+        try {
+          if (!win.closed) {
+            win.close();
+          }
+        } catch (e) {
+          console.log("Error closing window during stop: ", e);
+        }
+      });
+      
+      openWindows = [];
+      updateMetrics();
+      updateStatus("Stopped - all windows closed");
       document.getElementById("startBtn").disabled = false;
       document.getElementById("stopBtn").disabled = true;
     };
+    
+    // Clean up any windows that might have been manually closed
+    setInterval(() => {
+      openWindows = openWindows.filter(win => !win.closed);
+      updateMetrics();
+    }, 5000);
   </script>
 </body>
 </html>
