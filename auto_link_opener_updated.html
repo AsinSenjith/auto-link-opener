@@ -1,0 +1,66 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auto Link Opener/Closer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f2f2f2;
+    }
+    #startBtn, #stopBtn {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Auto Link Opener and Closer</h2>
+  <button id="startBtn">Start</button>
+  <button id="stopBtn" disabled>Stop</button>
+
+  <script>
+    const links = [
+      "https://www.profitableratecpm.com/rnct0itjk?key=0550c92ea01e4f4b64374d7f20243dce",
+      "https://www.profitableratecpm.com/tu63y9be?key=b407df2867a0350426e45133bf17cc1a",
+      "https://www.profitableratecpm.com/hjxp2nv46?key=e8148b85096b5d5267f09b2637898d17",
+      "https://www.profitableratecpm.com/a4wcmma9?key=1ce4bc5e1e7a5e57dc11f406ed201630"
+    ];
+
+    let isRunning = false;
+    let interval;
+
+    function openRandomLink() {
+      const randomIndex = Math.floor(Math.random() * links.length);
+      const link = links[randomIndex];
+      const win = window.open(link, "_blank", "width=600,height=400");
+
+      if (win) {
+        const delay = 5000 + Math.random() * 5000; // 5–10 seconds
+        setTimeout(() => {
+          win.close();
+        }, delay);
+      }
+    }
+
+    document.getElementById("startBtn").onclick = () => {
+      if (!isRunning) {
+        isRunning = true;
+        interval = setInterval(openRandomLink, 6000); // Try a new one every 6 seconds
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("stopBtn").disabled = false;
+      }
+    };
+
+    document.getElementById("stopBtn").onclick = () => {
+      clearInterval(interval);
+      isRunning = false;
+      document.getElementById("startBtn").disabled = false;
+      document.getElementById("stopBtn").disabled = true;
+    };
+  </script>
+</body>
+</html>
